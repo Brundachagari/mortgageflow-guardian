@@ -1,0 +1,9 @@
+{
+  "_note": "FICTIONAL / SYNTHETIC data only. Scenario: clean.",
+  "documentType": "PAY_STUB",
+  "employer": "Example Corporation",
+  "employee": "Jamie Smith",
+  "payPeriodStart": "2026-06-01",
+  "payPeriodEnd": "2026-06-15",
+  "grossPay": "$3,250.00"
+}

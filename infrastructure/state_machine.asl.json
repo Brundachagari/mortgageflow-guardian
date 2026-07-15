@@ -1,0 +1,67 @@
+{
+  "Comment": "MortgageFlow Guardian document processing workflow",
+  "StartAt": "Process",
+  "States": {
+    "Process": {
+      "Type": "Task",
+      "Resource": "${processor_arn}",
+      "Comment": "Extract, normalize, validate, and store the document.",
+      "Retry": [
+        {
+          "ErrorEquals": ["TemporaryProviderError"],
+          "IntervalSeconds": 2,
+          "BackoffRate": 2.0,
+          "MaxAttempts": 2
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "ResultPath": "$.error",
+          "Next": "DeadLetter"
+        }
+      ],
+      "Next": "NeedsReview"
+    },
+    "NeedsReview": {
+      "Type": "Choice",
+      "Comment": "Route documents that need a human to the SNS alert.",
+      "Choices": [
+        {
+          "Variable": "$.processingStatus",
+          "StringEquals": "NEEDS_REVIEW",
+          "Next": "NotifyReviewer"
+        }
+      ],
+      "Default": "Done"
+    },
+    "NotifyReviewer": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sns:publish",
+      "Parameters": {
+        "TopicArn": "${topic_arn}",
+        "Subject": "Document needs human review",
+        "Message.$": "States.Format('Document {} routed for human review. See DynamoDB for the reasons.', $.documentId)"
+      },
+      "Next": "Done"
+    },
+    "DeadLetter": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sqs:sendMessage",
+      "Comment": "Preserve permanently-failed documents; never drop them.",
+      "Parameters": {
+        "QueueUrl": "${dlq_url}",
+        "MessageBody.$": "States.JsonToString($)"
+      },
+      "Next": "Failed"
+    },
+    "Failed": {
+      "Type": "Fail",
+      "Error": "DocumentProcessingFailed",
+      "Cause": "Document could not be processed and was sent to the dead-letter queue."
+    },
+    "Done": {
+      "Type": "Succeed"
+    }
+  }
+}

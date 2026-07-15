@@ -1,0 +1,6 @@
+# Phase 1 dependencies (local, no AWS needed).
+pydantic>=2.5      # self-validating data models (the standard output schema)
+pytest>=8.0        # test runner
+
+# Added in later phases (kept here as a reference, commented out for now):
+# boto3>=1.34       # AWS SDK -- used by the DynamoDB/SNS/Bedrock adapters in Phase 2

@@ -1,0 +1,11 @@
+{
+  "_note": "FICTIONAL / SYNTHETIC data only. No real person or company. Used purely to demonstrate the pipeline.",
+  "documentType": "PAY_STUB",
+  "employer": "Example Corporation",
+  "employee": "Jamie Smith",
+  "payPeriodStart": "2026-06-01",
+  "payPeriodEnd": "2026-06-15",
+  "grossPay": "$3,250.00",
+  "netPay": "$2,610.00",
+  "hoursWorked": 80
+}
