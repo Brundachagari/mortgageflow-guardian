@@ -63,6 +63,7 @@ class Provider(str, Enum):
     """Which extraction provider produced a result."""
 
     MOCK = "MOCK"
+    ANTHROPIC = "ANTHROPIC"
     BEDROCK = "BEDROCK"
     TEXTRACT = "TEXTRACT"
     VERTEX_AI = "VERTEX_AI"

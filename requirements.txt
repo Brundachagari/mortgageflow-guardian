@@ -4,6 +4,7 @@
 
 # Core pipeline
 pydantic>=2.5      # self-validating data models (the standard output schema)
+anthropic>=0.40    # real LLM extraction via Claude (src/extraction/claude_provider.py)
 
 # Dashboard (dashboard.py)
 streamlit>=1.30    # the live web dashboard framework

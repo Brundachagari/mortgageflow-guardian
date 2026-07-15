@@ -283,8 +283,11 @@ everything so there is no lingering cost.
 
 ## 18. Current limitations
 
-- The AI extractor is a **mock**; a real provider (Bedrock/Textract) is a future
-  integration behind the existing interface.
+- The demo defaults to a **mock** extractor (free, deterministic, offline). A
+  **real Claude LLM extractor** (`src/extraction/claude_provider.py`) is
+  included and plugs into the same interface — run `python llm_demo.py` with an
+  `ANTHROPIC_API_KEY` set. Bedrock/Textract/Vertex adapters remain future work
+  behind the same abstraction.
 - One document type (pay stub) is supported.
 - Human review is modeled via alerts + status; there is no reviewer UI yet.
 - No authentication layer in front of the (future) results API.
