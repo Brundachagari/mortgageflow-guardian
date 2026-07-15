@@ -1,0 +1,11 @@
+# Custom theme for the dashboard (makes it look intentional, not default gray).
+[theme]
+base = "light"
+primaryColor = "#185FA5"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F5F7FA"
+textColor = "#1A1A1A"
+font = "sans serif"
+
+[browser]
+gatherUsageStats = false

@@ -1,6 +1,17 @@
-# Phase 1 dependencies (local, no AWS needed).
+# Dependencies for the project.
+# Streamlit Community Cloud installs this file when deploying the dashboard, so
+# it lists everything the app imports at runtime, plus the test tools used by CI.
+
+# Core pipeline
 pydantic>=2.5      # self-validating data models (the standard output schema)
+
+# Dashboard (dashboard.py)
+streamlit>=1.30    # the live web dashboard framework
+pandas>=2.0        # tables in the dashboard
+altair>=5.0        # the outcome chart
+
+# Tests / CI
 pytest>=8.0        # test runner
 
-# Added in later phases (kept here as a reference, commented out for now):
+# Added in later phases (kept as a reference, commented out):
 # boto3>=1.34       # AWS SDK -- used by the DynamoDB/SNS/Bedrock adapters in Phase 2
