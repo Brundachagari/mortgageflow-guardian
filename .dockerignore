@@ -1,0 +1,16 @@
+# Keep the image small and clean — don't copy these into the build.
+.venv/
+build/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.git/
+.github/
+infrastructure/
+tests/
+*.tfstate
+*.tfstate.*
+tfplan
+*.md
+.DS_Store
