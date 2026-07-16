@@ -12,16 +12,40 @@
 
 ---
 
+## ✅ Status
+
+![CI](https://github.com/Brundachagari/mortgageflow-guardian/actions/workflows/ci.yml/badge.svg)
+
+- ☁️ **Deployed and running in AWS** — 31 resources provisioned via Infrastructure as Code (S3, SQS, Lambda, Step Functions, DynamoDB, SNS, CloudWatch, IAM).
+- 🤖 **Real Claude LLM extraction** — a genuine Anthropic Claude provider runs behind the same interface as the mock ([`src/extraction/claude_provider.py`](src/extraction/claude_provider.py)).
+- 📊 **Live interactive dashboard** — an animated pipeline with a **Mock ↔ real-Claude** toggle ([`dashboard.py`](dashboard.py), also deployed on Streamlit Community Cloud).
+- 🏗️ **Infrastructure as Code** — validated with both **Terraform** and **OpenTofu**.
+- 🐳 **Containerized** — a [`Dockerfile`](Dockerfile) for the dashboard (portable to ECS / Kubernetes, with a healthcheck).
+- 🔄 **CI/CD** — GitHub Actions runs lint (ruff), tests (pytest), a security scan (bandit), and Terraform validation on every push.
+
+### Run it four ways
+| Surface | Command |
+|---|---|
+| Local demo (no AWS, no cost) | `python demo.py` |
+| Interactive dashboard | `streamlit run dashboard.py` |
+| Real Claude LLM | `export ANTHROPIC_API_KEY=sk-ant-... && python llm_demo.py` |
+| In a container | `docker build -t mortgageflow-dashboard . && docker run -p 8501:8501 mortgageflow-dashboard` |
+
+---
+
 ## 1. Project overview
 
-MortgageFlow Guardian receives a fictional pay stub, sends it to a (mock) AI
-extraction service, and then does the hard engineering part: it **standardizes,
-validates, monitors, and safely integrates** that AI output before any
-downstream system is allowed to trust it.
+MortgageFlow Guardian receives a fictional pay stub, sends it to an AI extraction
+service, and then does the hard engineering part: it **standardizes, validates,
+monitors, and safely integrates** that AI output before any downstream system is
+allowed to trust it.
 
 It is built as an **event-driven, serverless AWS system** with Infrastructure as
-Code, automated tests, CI, and end-to-end observability — and it runs **fully on
-a laptop** (no AWS required) for safe, free demonstration.
+Code, automated tests, CI, and end-to-end observability. The AI extractor sits
+behind a swappable interface: a **mock** provider (deterministic, free) for
+testing every path, and a **real Anthropic Claude** provider for genuine LLM
+extraction — interchangeable with a one-line change. It runs **fully on a laptop**
+(no AWS required), **live on AWS** (deployed), and **inside a Docker container**.
 
 ## 2. Business problem
 
