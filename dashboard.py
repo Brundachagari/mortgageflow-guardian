@@ -9,6 +9,7 @@ stage lighting up in turn. Same pipeline code as demo.py and the tests.
 """
 from __future__ import annotations
 
+import os
 import sys
 import time
 from pathlib import Path
@@ -19,6 +20,7 @@ import altair as alt  # noqa: E402  (ships with streamlit)
 import pandas as pd  # noqa: E402
 import streamlit as st  # noqa: E402
 
+from extraction.claude_provider import ClaudeExtractor  # noqa: E402
 from extraction.mock_provider import MockExtractor  # noqa: E402
 from notifications.notifier import CollectingNotifier  # noqa: E402
 from pipeline import Pipeline  # noqa: E402
@@ -43,6 +45,15 @@ STAGES = [
     ("Result", "●"),
 ]
 CLEAN_CONTENT = b"fictional-clean-paystub-v1"  # reused so a 2nd send = duplicate
+
+# A fictional, synthetic pay stub the real Claude extractor reads (editable in UI).
+SAMPLE_PAYSTUB = (
+    "EXAMPLE CORPORATION — Earnings Statement\n"
+    "Employee: Jamie Smith\n"
+    "Pay period: 2026-06-01 through 2026-06-15\n"
+    "Gross pay: $3,250.00\n"
+    "Net pay: $2,610.00\n"
+)
 
 st.markdown(
     """
@@ -73,6 +84,23 @@ if "repo" not in st.session_state:
 
 def _money(v):
     return f"${v:,.2f}" if isinstance(v, (int, float)) else "—"
+
+
+def _api_key():
+    """Find the Anthropic key from the environment or Streamlit secrets, if set."""
+    key = os.environ.get("ANTHROPIC_API_KEY")
+    if key:
+        return key
+    try:
+        return st.secrets.get("ANTHROPIC_API_KEY")
+    except Exception:
+        return None
+
+
+def _claude_extractor(key):
+    import anthropic
+
+    return ClaudeExtractor(client=anthropic.Anthropic(api_key=key))
 
 
 # --------------------------------------------------------------------------- #
@@ -108,16 +136,17 @@ def flow_html(active: int, outcome_key: str | None = None) -> str:
     )
 
 
-def run(scenario, content, fail_times, flow_ph, banner_ph):
-    """Run the real pipeline, then animate the flow and show the result."""
+def run(extractor, content, flow_ph, banner_ph):
+    """Run the pipeline with the given extractor, animate, and show the result."""
     pipe = Pipeline(
-        extractor=MockExtractor(scenario=scenario, fail_times=fail_times),
+        extractor=extractor,
         repository=st.session_state.repo,
         notifier=st.session_state.notifier,
         dead_letter_queue=st.session_state.dlq,
         sleep=lambda s: time.sleep(min(s, 0.3)),
     )
-    result = pipe.process(content)
+    with st.spinner("Processing…"):
+        result = pipe.process(content)
 
     if result.deduplicated:
         st.session_state.dupes += 1
@@ -181,34 +210,61 @@ st.write("")
 # Controls
 # --------------------------------------------------------------------------- #
 st.markdown("**Send a document through the pipeline**")
-cols = st.columns(6)
-clicked = None
-if cols[0].button("🟢 Clean", use_container_width=True):
-    clicked = ("clean", CLEAN_CONTENT, 0)
-if cols[1].button("🟡 Low confidence", use_container_width=True):
-    clicked = ("low_confidence", b"lc-%f" % time.time(), 0)
-if cols[2].button("🟡 Missing field", use_container_width=True):
-    clicked = ("missing_field", b"mf-%f" % time.time(), 0)
-if cols[3].button("🔁 Timeout→retry", use_container_width=True):
-    clicked = ("clean", b"rt-%f" % time.time(), 2)
-if cols[4].button("🔴 Corrupt", use_container_width=True):
-    clicked = ("corrupt", b"cr-%f" % time.time(), 0)
-if cols[5].button("♻️ Reset", use_container_width=True):
-    _reset()
+provider = st.radio(
+    "AI provider",
+    ["🟡 Mock provider (fast · free · deterministic)", "🤖 Real Claude LLM (reads the text)"],
+    horizontal=True,
+    label_visibility="collapsed",
+)
+
+clicked = None  # becomes (extractor, content) when a document is submitted
+
+if provider.startswith("🟡"):
+    cols = st.columns(6)
+    if cols[0].button("🟢 Clean", use_container_width=True):
+        clicked = (MockExtractor(scenario="clean"), CLEAN_CONTENT)
+    if cols[1].button("🟡 Low confidence", use_container_width=True):
+        clicked = (MockExtractor(scenario="low_confidence"), b"lc-%f" % time.time())
+    if cols[2].button("🟡 Missing field", use_container_width=True):
+        clicked = (MockExtractor(scenario="missing_field"), b"mf-%f" % time.time())
+    if cols[3].button("🔁 Timeout→retry", use_container_width=True):
+        clicked = (MockExtractor(scenario="clean", fail_times=2), b"rt-%f" % time.time())
+    if cols[4].button("🔴 Corrupt", use_container_width=True):
+        clicked = (MockExtractor(scenario="corrupt"), b"cr-%f" % time.time())
+    if cols[5].button("♻️ Reset", use_container_width=True):
+        _reset()
+else:
+    key = _api_key()
+    if not key:
+        st.info(
+            "🔑 Set `ANTHROPIC_API_KEY` in your terminal (or Streamlit secrets) to enable "
+            "real Claude extraction. The mock provider works without a key."
+        )
+    else:
+        text = st.text_area(
+            "Pay stub text (synthetic — edit it and watch Claude read the new values)",
+            value=SAMPLE_PAYSTUB,
+            height=150,
+        )
+        c1, c2 = st.columns([3, 1])
+        if c1.button("🤖 Extract with real Claude", use_container_width=True):
+            clicked = (_claude_extractor(key), text.encode("utf-8"))
+        if c2.button("♻️ Reset", use_container_width=True):
+            _reset()
 
 # --- the animated pipeline flow + result banner ----------------------------
 flow_ph = st.empty()
 banner_ph = st.empty()
 
 if clicked:
-    run(clicked[0], clicked[1], clicked[2], flow_ph, banner_ph)
+    run(clicked[0], clicked[1], flow_ph, banner_ph)
 else:
     last = st.session_state.last
     flow_ph.markdown(flow_html(-1, last["key"] if last else None), unsafe_allow_html=True)
     if last:
         _banner(banner_ph, last)
     else:
-        banner_ph.info("Click a document type above to watch it flow through the pipeline.")
+        banner_ph.info("Pick a provider and send a document to watch it flow through the pipeline.")
 
 # --------------------------------------------------------------------------- #
 # KPI cards (filled now, with fresh counts)
@@ -272,6 +328,7 @@ with right:
                 [
                     {
                         "Document": r["documentId"],
+                        "Provider": r.get("provider"),
                         "Status": r["processingStatus"],
                         "Employee": r.get("employeeName") or "—",
                         "Gross pay": _money(r.get("grossPay")),
